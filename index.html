@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Health Tracker">
+<meta name="theme-color" content="#6B4C9A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Health Tracker</title>
+<style>
+:root {
+  --purple: #6B4C9A;
+  --purple-light: #9B7BC7;
+  --purple-dark: #4A3470;
+  --pink: #E8A0BF;
+  --pink-light: #F5D5E5;
+  --bg: #FAF7FF;
+  --card: #FFFFFF;
+  --text: #2D2040;
+  --text-light: #7A6B8A;
+  --border: #E8E0F0;
+  --success: #4CAF50;
+  --danger: #E57373;
+  --period-red: #E53935;
+  --today-highlight: #EDE7F6;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom, 80px);
+  overflow-x: hidden;
+}
+
+/* Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-light);
+  font-size: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.nav-btn.active { color: var(--purple); }
+.nav-btn svg { width: 24px; height: 24px; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--purple), var(--purple-light));
+  color: white;
+  padding: 16px 20px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  text-align: center;
+}
+.header h1 { font-size: 20px; font-weight: 600; }
+.header p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+/* Views */
+.view { display: none; padding: 16px; padding-bottom: 100px; }
+.view.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(107,76,154,0.08);
+  border: 1px solid var(--border);
+}
+.card h2 {
+  font-size: 15px;
+  color: var(--purple);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card h2 svg { width: 18px; height: 18px; }
+
+/* Date selector */
+.date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.date-nav button {
+  background: var(--purple);
+  color: white;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.date-nav .date-display {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--purple-dark);
+  min-width: 180px;
+  text-align: center;
+}
+.date-nav .today-btn {
+  background: var(--pink-light);
+  color: var(--purple);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Slider fields */
+.field-group { margin-bottom: 14px; }
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.field-label span { font-size: 14px; font-weight: 500; }
+.field-label .value-badge {
+  background: var(--purple);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 32px;
+  text-align: center;
+}
+.field-label .value-badge.zero { background: var(--border); color: var(--text-light); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #C8E6C9 0%, #FFF9C4 50%, #FFCDD2 100%);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--purple);
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+/* Toggle switches */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-row label { font-size: 14px; font-weight: 500; flex: 1; }
+.toggle-row input[type="number"] {
+  width: 80px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+  margin-left: 8px;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch .slider {
+  position: absolute;
+  inset: 0;
+  background: #ccc;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.toggle-switch .slider:before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+.toggle-switch input:checked + .slider { background: var(--purple); }
+.toggle-switch input:checked + .slider:before { transform: translateX(20px); }
+
+/* Period button */
+.period-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid var(--period-red);
+  background: white;
+  color: var(--period-red);
+}
+.period-btn.active {
+  background: var(--period-red);
+  color: white;
+}
+.period-btn svg { width: 20px; height: 20px; }
+
+/* Text inputs */
+textarea, .text-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 44px;
+  background: var(--bg);
+}
+textarea:focus, .text-input:focus { outline: none; border-color: var(--purple-light); }
+
+/* Save button */
+.save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--purple), var(--purple-light));
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(107,76,154,0.3);
+  transition: transform 0.1s;
+}
+.save-btn:active { transform: scale(0.98); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--success);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 200;
+  transition: transform 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Calendar */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+.cal-header h3 { font-size: 16px; color: var(--purple-dark); }
+.cal-header button {
+  background: var(--purple);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-day-header {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-light);
+  padding: 6px 0;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  position: relative;
+  gap: 2px;
+  transition: background 0.15s;
+}
+.cal-day:hover { background: var(--today-highlight); }
+.cal-day.today { background: var(--today-highlight); font-weight: 700; }
+.cal-day.has-data { font-weight: 600; }
+.cal-day.period-day { background: #FFEBEE; }
+.cal-day.period-start { background: var(--period-red); color: white; font-weight: 700; }
+.cal-day.other-month { opacity: 0.3; }
+.cal-day .dot-row { display: flex; gap: 2px; }
+.cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.cal-dot.symptom { background: #FF9800; }
+.cal-dot.hrt { background: var(--purple); }
+.cal-dot.supplement { background: #4CAF50; }
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 8px 0;
+  font-size: 11px;
+  color: var(--text-light);
+}
+.legend span { display: flex; align-items: center; gap: 4px; }
+.legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Summary cards */
+.summary-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.summary-stat:last-child { border-bottom: none; }
+.summary-stat .label { font-size: 14px; }
+.summary-stat .values { display: flex; gap: 12px; font-size: 13px; }
+.summary-stat .val {
+  background: var(--bg);
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.summary-stat .val.high { background: #FFEBEE; color: #C62828; }
+.summary-stat .val.med { background: #FFF8E1; color: #F57F17; }
+.summary-stat .val.low { background: #E8F5E9; color: #2E7D32; }
+
+.period-info {
+  background: var(--pink-light);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.period-info strong { color: var(--period-red); }
+
+/* Data export */
+.export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: white;
+  color: var(--purple);
+  border: 2px solid var(--purple);
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.export-btn:active { background: var(--bg); }
+
+/* Cycle date input */
+.cycle-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.cycle-input-row input[type="date"] {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+}
+.cycle-input-row button {
+  padding: 10px 16px;
+  background: var(--period-red);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cycle-list {
+  margin-top: 10px;
+}
+.cycle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--pink-light);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.cycle-item .del-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Perimenopause + HRT Tracker</h1>
+  <p id="headerSubtitle">Daily health tracking</p>
+</div>
+
+<!-- DAILY LOG VIEW -->
+<div id="logView" class="view active">
+  <div class="date-nav">
+    <button onclick="changeDate(-1)" aria-label="Previous day">&#8249;</button>
+    <div class="date-display" id="dateDisplay"></div>
+    <button onclick="changeDate(1)" aria-label="Next day">&#8250;</button>
+    <button class="today-btn" onclick="goToToday()">Today</button>
+  </div>
+
+  <!-- Period -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Menstrual Cycle
+    </h2>
+    <button class="period-btn" id="periodBtn" onclick="togglePeriod()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 6 10 6 15a6 6 0 0 0 12 0c0-5-6-13-6-13z"/></svg>
+      <span id="periodBtnText">Period Start (Day 1)</span>
+    </button>
+    <div id="cycleInfo" style="margin-top: 10px; font-size: 13px; color: var(--text-light);"></div>
+  </div>
+
+  <!-- Symptoms -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Symptoms (0 = none, 10 = severe)
+    </h2>
+    <div id="symptomSliders"></div>
+  </div>
+
+  <!-- HRT -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-6 18.75h6"/></svg>
+      HRT
+    </h2>
+    <div class="toggle-row">
+      <label>Estradiol Gel</label>
+      <div class="toggle-switch">
+        <input type="checkbox" id="hrt_estradiol">
+        <span class="slider"></span>
+      </div>
+      <input type="number" id="hrt_estradiol_dose" placeholder="mg" step="0.25" min="0">
+    </div>
+    <div class="toggle-row">
+      <label>Progesterone</label>
+      <div class="toggle-switch">
+        <input type="checkbox" id="hrt_progesterone">
+        <span class="slider"></span>
+      </div>
+      <input type="number" id="hrt_progesterone_dose" placeholder="mg" step="25" min="0">
+    </div>
+    <textarea id="hrt_notes" placeholder="HRT notes..." rows="2" style="margin-top: 10px;"></textarea>
+  </div>
+
+  <!-- Medications -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v14l-8-3-8 3z"/></svg>
+      Medications
+    </h2>
+    <div class="toggle-row">
+      <label>Hydroxychloroquine</label>
+      <input type="number" id="med_hcq" placeholder="mg" step="100" min="0" class="text-input" style="width:80px;">
+    </div>
+    <div class="toggle-row">
+      <label>Methotrexate</label>
+      <input type="number" id="med_mtx" placeholder="mg" step="2.5" min="0" class="text-input" style="width:80px;">
+    </div>
+    <div class="toggle-row">
+      <label>Euthyrox</label>
+      <input type="number" id="med_euthyrox" placeholder="mcg" step="12.5" min="0" class="text-input" style="width:80px;">
+    </div>
+  </div>
+
+  <!-- Supplements -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+      Supplements
+    </h2>
+    <div class="toggle-row">
+      <label>Omega-3</label>
+      <input type="number" id="sup_omega3" placeholder="mg" min="0" class="text-input" style="width:80px;">
+    </div>
+    <div class="toggle-row">
+      <label>Vitamin D3</label>
+      <input type="number" id="sup_vitd" placeholder="IU" min="0" class="text-input" style="width:80px;">
+    </div>
+    <div class="toggle-row">
+      <label>Vitamin K2</label>
+      <input type="number" id="sup_vitk" placeholder="mcg" min="0" class="text-input" style="width:80px;">
+    </div>
+    <div class="toggle-row">
+      <label>Magnesium</label>
+      <input type="number" id="sup_mag" placeholder="mg" min="0" class="text-input" style="width:80px;">
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      Notes
+    </h2>
+    <textarea id="general_notes" placeholder="General notes..." rows="2"></textarea>
+    <textarea id="bleeding_notes" placeholder="Bleeding / spotting details..." rows="2" style="margin-top: 8px;"></textarea>
+  </div>
+
+  <button class="save-btn" onclick="saveEntry()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+    Save Entry
+  </button>
+</div>
+
+<!-- CALENDAR VIEW -->
+<div id="calView" class="view">
+  <div class="card">
+    <div class="cal-header">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <h3 id="calMonthYear"></h3>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="legend" style="margin-top: 8px;">
+      <span><span class="dot" style="background:#E53935;"></span> Period</span>
+      <span><span class="dot" style="background:#FF9800;"></span> Symptoms</span>
+      <span><span class="dot" style="background:#6B4C9A;"></span> HRT</span>
+      <span><span class="dot" style="background:#4CAF50;"></span> Supplements</span>
+    </div>
+  </div>
+
+  <!-- Cycle Management -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="currentColor" style="color: var(--period-red);"><path d="M12 2C12 2 6 10 6 15a6 6 0 0 0 12 0c0-5-6-13-6-13z"/></svg>
+      Cycle Start Dates
+    </h2>
+    <div class="cycle-input-row">
+      <input type="date" id="newCycleDate">
+      <button onclick="addCycleDate()">Add</button>
+    </div>
+    <div class="cycle-list" id="cycleList"></div>
+  </div>
+</div>
+
+<!-- SUMMARY VIEW -->
+<div id="summaryView" class="view">
+  <div class="period-info" id="periodSummary"></div>
+
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Symptom Averages
+    </h2>
+    <div style="display:flex; gap:8px; margin-bottom: 10px;">
+      <button class="today-btn" onclick="setSummaryRange(7)" id="range7" style="font-weight:700;">7 days</button>
+      <button class="today-btn" onclick="setSummaryRange(14)" id="range14">14 days</button>
+      <button class="today-btn" onclick="setSummaryRange(30)" id="range30">30 days</button>
+    </div>
+    <div id="summaryStats"></div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Data Management
+    </h2>
+    <button class="export-btn" onclick="exportCSV()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Export as CSV
+    </button>
+    <button class="export-btn" onclick="importCSV()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      Import CSV
+    </button>
+    <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCSVImport(event)">
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="switchView('log')" id="navLog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+    Log
+  </button>
+  <button class="nav-btn" onclick="switchView('cal')" id="navCal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Calendar
+  </button>
+  <button class="nav-btn" onclick="switchView('summary')" id="navSummary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Summary
+  </button>
+</nav>
+
+<script>
+// ============ DATA LAYER ============
+const STORAGE_KEY = 'healthTracker_v1';
+const CYCLES_KEY = 'healthTracker_cycles_v1';
+
+const SYMPTOMS = [
+  { id: 'anxiety', label: 'Anxiety' },
+  { id: 'low_mood', label: 'Low Mood' },
+  { id: 'fatigue', label: 'Low Energy / Fatigue' },
+  { id: 'brain_fog', label: 'Brain Fog' },
+  { id: 'hot_flashes', label: 'Hot Flashes' },
+  { id: 'joint_aches', label: 'Joint Aches' },
+  { id: 'sleep_quality', label: 'Poor / Disturbed Sleep' },
+  { id: 'tongue_tingling', label: 'Tongue Tingling' },
+];
+
+let currentDate = new Date();
+let calMonth = new Date();
+let summaryRange = 7;
+
+function dateKey(d) {
+  if (typeof d === 'string') return d;
+  return d.toISOString().split('T')[0];
+}
+
+function loadAllData() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveAllData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+function loadEntry(date) {
+  return loadAllData()[dateKey(date)] || {};
+}
+function saveEntry() {
+  const data = loadAllData();
+  const key = dateKey(currentDate);
+  const entry = {};
+
+  // Period
+  entry.period_start = document.getElementById('periodBtn').classList.contains('active');
+
+  // Symptoms
+  SYMPTOMS.forEach(s => {
+    entry['sym_' + s.id] = parseInt(document.getElementById('sym_' + s.id).value);
+  });
+  entry.sym_others = document.getElementById('sym_others').value;
+
+  // HRT
+  entry.hrt_estradiol = document.getElementById('hrt_estradiol').checked;
+  entry.hrt_estradiol_dose = parseFloat(document.getElementById('hrt_estradiol_dose').value) || 0;
+  entry.hrt_progesterone = document.getElementById('hrt_progesterone').checked;
+  entry.hrt_progesterone_dose = parseFloat(document.getElementById('hrt_progesterone_dose').value) || 0;
+  entry.hrt_notes = document.getElementById('hrt_notes').value;
+
+  // Medications
+  entry.med_hcq = parseFloat(document.getElementById('med_hcq').value) || 0;
+  entry.med_mtx = parseFloat(document.getElementById('med_mtx').value) || 0;
+  entry.med_euthyrox = parseFloat(document.getElementById('med_euthyrox').value) || 0;
+
+  // Supplements
+  entry.sup_omega3 = parseFloat(document.getElementById('sup_omega3').value) || 0;
+  entry.sup_vitd = parseFloat(document.getElementById('sup_vitd').value) || 0;
+  entry.sup_vitk = parseFloat(document.getElementById('sup_vitk').value) || 0;
+  entry.sup_mag = parseFloat(document.getElementById('sup_mag').value) || 0;
+
+  // Notes
+  entry.general_notes = document.getElementById('general_notes').value;
+  entry.bleeding_notes = document.getElementById('bleeding_notes').value;
+
+  // If period start, also add to cycle dates
+  if (entry.period_start) {
+    addCycleDateSilent(key);
+  } else {
+    removeCycleDate(key);
+  }
+
+  data[key] = entry;
+  saveAllData(data);
+  showToast('Saved!');
+}
+
+function loadEntryToUI(date) {
+  const entry = loadEntry(date);
+
+  // Period
+  const btn = document.getElementById('periodBtn');
+  if (entry.period_start) {
+    btn.classList.add('active');
+    document.getElementById('periodBtnText').textContent = 'Period Start (Day 1) - YES';
+  } else {
+    btn.classList.remove('active');
+    document.getElementById('periodBtnText').textContent = 'Period Start (Day 1)';
+  }
+
+  // Cycle info
+  updateCycleInfo();
+
+  // Symptoms
+  SYMPTOMS.forEach(s => {
+    const slider = document.getElementById('sym_' + s.id);
+    slider.value = entry['sym_' + s.id] || 0;
+    updateSliderBadge(s.id);
+  });
+  document.getElementById('sym_others').value = entry.sym_others || '';
+
+  // HRT
+  document.getElementById('hrt_estradiol').checked = entry.hrt_estradiol || false;
+  document.getElementById('hrt_estradiol_dose').value = entry.hrt_estradiol_dose || '';
+  document.getElementById('hrt_progesterone').checked = entry.hrt_progesterone || false;
+  document.getElementById('hrt_progesterone_dose').value = entry.hrt_progesterone_dose || '';
+  document.getElementById('hrt_notes').value = entry.hrt_notes || '';
+
+  // Medications
+  document.getElementById('med_hcq').value = entry.med_hcq || '';
+  document.getElementById('med_mtx').value = entry.med_mtx || '';
+  document.getElementById('med_euthyrox').value = entry.med_euthyrox || '';
+
+  // Supplements
+  document.getElementById('sup_omega3').value = entry.sup_omega3 || '';
+  document.getElementById('sup_vitd').value = entry.sup_vitd || '';
+  document.getElementById('sup_vitk').value = entry.sup_vitk || '';
+  document.getElementById('sup_mag').value = entry.sup_mag || '';
+
+  // Notes
+  document.getElementById('general_notes').value = entry.general_notes || '';
+  document.getElementById('bleeding_notes').value = entry.bleeding_notes || '';
+}
+
+// ============ SYMPTOMS UI ============
+function buildSymptomSliders() {
+  const container = document.getElementById('symptomSliders');
+  let html = '';
+  SYMPTOMS.forEach(s => {
+    html += `
+      <div class="field-group">
+        <div class="field-label">
+          <span>${s.label}</span>
+          <span class="value-badge zero" id="badge_${s.id}">0</span>
+        </div>
+        <input type="range" min="0" max="10" value="0" id="sym_${s.id}" oninput="updateSliderBadge('${s.id}')">
+      </div>`;
+  });
+  html += `
+    <div class="field-group">
+      <div class="field-label"><span>Other Symptoms</span></div>
+      <textarea id="sym_others" placeholder="Describe any other symptoms..." rows="2"></textarea>
+    </div>`;
+  container.innerHTML = html;
+}
+
+function updateSliderBadge(id) {
+  const val = parseInt(document.getElementById('sym_' + id).value);
+  const badge = document.getElementById('badge_' + id);
+  badge.textContent = val;
+  badge.classList.toggle('zero', val === 0);
+}
+
+// ============ PERIOD & CYCLES ============
+function togglePeriod() {
+  const btn = document.getElementById('periodBtn');
+  btn.classList.toggle('active');
+  const isActive = btn.classList.contains('active');
+  document.getElementById('periodBtnText').textContent = isActive
+    ? 'Period Start (Day 1) - YES'
+    : 'Period Start (Day 1)';
+}
+
+function loadCycles() {
+  try { return JSON.parse(localStorage.getItem(CYCLES_KEY)) || []; } catch { return []; }
+}
+function saveCycles(cycles) {
+  localStorage.setItem(CYCLES_KEY, JSON.stringify(cycles));
+}
+
+function addCycleDateSilent(dateStr) {
+  const cycles = loadCycles();
+  if (!cycles.includes(dateStr)) {
+    cycles.push(dateStr);
+    cycles.sort();
+    saveCycles(cycles);
+  }
+}
+function removeCycleDate(dateStr) {
+  let cycles = loadCycles();
+  cycles = cycles.filter(c => c !== dateStr);
+  saveCycles(cycles);
+}
+
+function addCycleDate() {
+  const input = document.getElementById('newCycleDate');
+  if (!input.value) return;
+  addCycleDateSilent(input.value);
+  // Also mark it in data
+  const data = loadAllData();
+  if (!data[input.value]) data[input.value] = {};
+  data[input.value].period_start = true;
+  saveAllData(data);
+  input.value = '';
+  renderCycleList();
+  renderCalendar();
+  showToast('Cycle date added');
+}
+
+function deleteCycleDate(dateStr) {
+  removeCycleDate(dateStr);
+  const data = loadAllData();
+  if (data[dateStr]) {
+    data[dateStr].period_start = false;
+    saveAllData(data);
+  }
+  renderCycleList();
+  renderCalendar();
+  if (dateKey(currentDate) === dateStr) loadEntryToUI(currentDate);
+}
+
+function renderCycleList() {
+  const cycles = loadCycles();
+  const container = document.getElementById('cycleList');
+  if (cycles.length === 0) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-light);padding:8px 0;">No cycle dates recorded yet.</p>';
+    return;
+  }
+  container.innerHTML = cycles.slice().reverse().map(c => {
+    const d = new Date(c + 'T00:00:00');
+    const formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    return `<div class="cycle-item"><span>${formatted}</span><button class="del-btn" onclick="deleteCycleDate('${c}')">&times;</button></div>`;
+  }).join('');
+}
+
+function updateCycleInfo() {
+  const cycles = loadCycles();
+  const today = dateKey(currentDate);
+  const el = document.getElementById('cycleInfo');
+  if (cycles.length === 0) { el.textContent = ''; return; }
+
+  // Find most recent cycle start on or before current date
+  let lastStart = null;
+  for (let i = cycles.length - 1; i >= 0; i--) {
+    if (cycles[i] <= today) { lastStart = cycles[i]; break; }
+  }
+  if (lastStart) {
+    const diff = Math.floor((new Date(today + 'T00:00:00') - new Date(lastStart + 'T00:00:00')) / 86400000);
+    el.textContent = `Cycle day ${diff + 1} (started ${lastStart})`;
+  } else {
+    el.textContent = '';
+  }
+}
+
+// ============ DATE NAVIGATION ============
+function updateDateDisplay() {
+  const opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+  document.getElementById('dateDisplay').textContent = currentDate.toLocaleDateString('en-US', opts);
+  const today = new Date();
+  const isToday = dateKey(currentDate) === dateKey(today);
+  document.getElementById('headerSubtitle').textContent = isToday ? 'Today' : dateKey(currentDate);
+}
+function changeDate(delta) {
+  currentDate.setDate(currentDate.getDate() + delta);
+  updateDateDisplay();
+  loadEntryToUI(currentDate);
+}
+function goToToday() {
+  currentDate = new Date();
+  updateDateDisplay();
+  loadEntryToUI(currentDate);
+}
+
+// ============ CALENDAR ============
+function renderCalendar() {
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+  document.getElementById('calMonthYear').textContent =
+    new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const grid = document.getElementById('calGrid');
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  // First day of month (0=Sun), adjust for Monday start
+  const firstDay = new Date(year, month, 1).getDay();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const data = loadAllData();
+  const cycles = loadCycles();
+  const todayKey = dateKey(new Date());
+
+  // Previous month fill
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  for (let i = startOffset - 1; i >= 0; i--) {
+    const day = prevMonthDays - i;
+    html += `<div class="cal-day other-month">${day}</div>`;
+  }
+
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const entry = data[key] || {};
+    const isToday = key === todayKey;
+    const isPeriodStart = cycles.includes(key);
+
+    // Check if within period (assume ~5 days from start)
+    let isPeriodDay = false;
+    for (const cs of cycles) {
+      const diff = (new Date(key + 'T00:00:00') - new Date(cs + 'T00:00:00')) / 86400000;
+      if (diff >= 0 && diff < 5 && !isPeriodStart) { isPeriodDay = true; break; }
+    }
+
+    const hasSymptoms = SYMPTOMS.some(s => (entry['sym_' + s.id] || 0) > 0);
+    const hasHRT = entry.hrt_estradiol || entry.hrt_progesterone;
+    const hasSupp = (entry.sup_omega3 || entry.sup_vitd || entry.sup_vitk || entry.sup_mag);
+    const hasData = Object.keys(entry).length > 0;
+
+    let classes = 'cal-day';
+    if (isToday) classes += ' today';
+    if (hasData) classes += ' has-data';
+    if (isPeriodStart) classes += ' period-start';
+    else if (isPeriodDay) classes += ' period-day';
+
+    html += `<div class="${classes}" onclick="jumpToDate('${key}')">
+      ${d}
+      <div class="dot-row">
+        ${hasSymptoms ? '<span class="cal-dot symptom"></span>' : ''}
+        ${hasHRT ? '<span class="cal-dot hrt"></span>' : ''}
+        ${hasSupp ? '<span class="cal-dot supplement"></span>' : ''}
+      </div>
+    </div>`;
+  }
+
+  // Next month fill
+  const totalCells = startOffset + daysInMonth;
+  const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-day other-month">${i}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function changeMonth(delta) {
+  calMonth.setMonth(calMonth.getMonth() + delta);
+  renderCalendar();
+}
+
+function jumpToDate(key) {
+  currentDate = new Date(key + 'T00:00:00');
+  updateDateDisplay();
+  loadEntryToUI(currentDate);
+  switchView('log');
+}
+
+// ============ SUMMARY ============
+function setSummaryRange(n) {
+  summaryRange = n;
+  [7, 14, 30].forEach(r => {
+    document.getElementById('range' + r).style.fontWeight = r === n ? '700' : '400';
+  });
+  renderSummary();
+}
+
+function renderSummary() {
+  const data = loadAllData();
+  const today = new Date();
+  const keys = [];
+  for (let i = 0; i < summaryRange; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    keys.push(dateKey(d));
+  }
+
+  const stats = document.getElementById('summaryStats');
+  let html = '';
+  SYMPTOMS.forEach(s => {
+    const vals = keys.map(k => (data[k] || {})['sym_' + s.id] || 0).filter(v => v > 0);
+    const avg = vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '-';
+    const max = vals.length ? Math.max(...vals) : '-';
+    const avgNum = parseFloat(avg);
+    let cls = 'low';
+    if (avgNum >= 5) cls = 'high';
+    else if (avgNum >= 3) cls = 'med';
+    if (avg === '-') cls = '';
+
+    html += `<div class="summary-stat">
+      <span class="label">${s.label}</span>
+      <span class="values">
+        <span class="val ${cls}">avg ${avg}</span>
+        <span class="val">max ${max}</span>
+      </span>
+    </div>`;
+  });
+  stats.innerHTML = html;
+
+  // Period info
+  const cycles = loadCycles();
+  const periodEl = document.getElementById('periodSummary');
+  if (cycles.length >= 2) {
+    const lengths = [];
+    for (let i = 1; i < cycles.length; i++) {
+      const diff = Math.floor((new Date(cycles[i] + 'T00:00:00') - new Date(cycles[i-1] + 'T00:00:00')) / 86400000);
+      lengths.push(diff);
+    }
+    const avgCycle = (lengths.reduce((a, b) => a + b, 0) / lengths.length).toFixed(0);
+    const lastStart = cycles[cycles.length - 1];
+    const daysSince = Math.floor((today - new Date(lastStart + 'T00:00:00')) / 86400000);
+    periodEl.innerHTML = `<strong>Cycle:</strong> Currently day ${daysSince + 1} &bull; Average length: ${avgCycle} days &bull; Last period: ${lastStart} &bull; ${cycles.length} cycles recorded`;
+  } else if (cycles.length === 1) {
+    const daysSince = Math.floor((today - new Date(cycles[0] + 'T00:00:00')) / 86400000);
+    periodEl.innerHTML = `<strong>Cycle:</strong> Currently day ${daysSince + 1} &bull; Last period: ${cycles[0]}`;
+  } else {
+    periodEl.innerHTML = '<strong>Cycle:</strong> No period dates recorded yet.';
+  }
+}
+
+// ============ EXPORT / IMPORT ============
+function exportCSV() {
+  const data = loadAllData();
+  const keys = Object.keys(data).sort();
+  if (keys.length === 0) { showToast('No data to export'); return; }
+
+  const symCols = SYMPTOMS.map(s => s.label);
+  const headers = ['Date', 'Period Start', ...symCols, 'Other Symptoms',
+    'Estradiol Gel', 'Estradiol Dose', 'Progesterone', 'Progesterone Dose', 'HRT Notes',
+    'Hydroxychloroquine', 'Methotrexate', 'Euthyrox',
+    'Omega-3', 'Vitamin D3', 'Vitamin K2', 'Magnesium',
+    'General Notes', 'Bleeding/Spotting'];
+
+  let csv = headers.map(h => `"${h}"`).join(',') + '\n';
+  keys.forEach(k => {
+    const e = data[k];
+    const row = [
+      k,
+      e.period_start ? 'Y' : '',
+      ...SYMPTOMS.map(s => e['sym_' + s.id] || 0),
+      `"${(e.sym_others || '').replace(/"/g, '""')}"`,
+      e.hrt_estradiol ? 'Y' : '', e.hrt_estradiol_dose || '',
+      e.hrt_progesterone ? 'Y' : '', e.hrt_progesterone_dose || '',
+      `"${(e.hrt_notes || '').replace(/"/g, '""')}"`,
+      e.med_hcq || '', e.med_mtx || '', e.med_euthyrox || '',
+      e.sup_omega3 || '', e.sup_vitd || '', e.sup_vitk || '', e.sup_mag || '',
+      `"${(e.general_notes || '').replace(/"/g, '""')}"`,
+      `"${(e.bleeding_notes || '').replace(/"/g, '""')}"`
+    ];
+    csv += row.join(',') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `health-tracker-${dateKey(new Date())}.csv`;
+  a.click();
+  showToast('CSV exported!');
+}
+
+function importCSV() {
+  document.getElementById('csvFileInput').click();
+}
+
+function handleCSVImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      const data = loadAllData();
+      // Skip header
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,))/g) || [];
+        const clean = cols.map(c => c.replace(/^"|"$/g, '').trim());
+        if (!clean[0] || !clean[0].match(/^\d{4}-\d{2}-\d{2}$/)) continue;
+        const key = clean[0];
+        const entry = {};
+        entry.period_start = clean[1] === 'Y';
+        SYMPTOMS.forEach((s, idx) => { entry['sym_' + s.id] = parseInt(clean[2 + idx]) || 0; });
+        entry.sym_others = clean[2 + SYMPTOMS.length] || '';
+        const off = 3 + SYMPTOMS.length;
+        entry.hrt_estradiol = clean[off] === 'Y';
+        entry.hrt_estradiol_dose = parseFloat(clean[off + 1]) || 0;
+        entry.hrt_progesterone = clean[off + 2] === 'Y';
+        entry.hrt_progesterone_dose = parseFloat(clean[off + 3]) || 0;
+        entry.hrt_notes = clean[off + 4] || '';
+        entry.med_hcq = parseFloat(clean[off + 5]) || 0;
+        entry.med_mtx = parseFloat(clean[off + 6]) || 0;
+        entry.med_euthyrox = parseFloat(clean[off + 7]) || 0;
+        entry.sup_omega3 = parseFloat(clean[off + 8]) || 0;
+        entry.sup_vitd = parseFloat(clean[off + 9]) || 0;
+        entry.sup_vitk = parseFloat(clean[off + 10]) || 0;
+        entry.sup_mag = parseFloat(clean[off + 11]) || 0;
+        entry.general_notes = clean[off + 12] || '';
+        entry.bleeding_notes = clean[off + 13] || '';
+        data[key] = entry;
+        if (entry.period_start) addCycleDateSilent(key);
+      }
+      saveAllData(data);
+      loadEntryToUI(currentDate);
+      showToast('Data imported!');
+    } catch (err) {
+      showToast('Import failed');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ============ NAVIGATION ============
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  if (view === 'log') {
+    document.getElementById('logView').classList.add('active');
+    document.getElementById('navLog').classList.add('active');
+  } else if (view === 'cal') {
+    document.getElementById('calView').classList.add('active');
+    document.getElementById('navCal').classList.add('active');
+    renderCalendar();
+    renderCycleList();
+  } else if (view === 'summary') {
+    document.getElementById('summaryView').classList.add('active');
+    document.getElementById('navSummary').classList.add('active');
+    renderSummary();
+  }
+}
+
+// ============ UTILS ============
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ============ INIT ============
+function init() {
+  // Set calendar to start from March 2026
+  calMonth = new Date(2026, 2); // March 2026
+
+  buildSymptomSliders();
+  updateDateDisplay();
+  loadEntryToUI(currentDate);
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+  }
+}
+
+init();
+</script>
+</body>
+</html>
